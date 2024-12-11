@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FHIR Communication Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label, button {
+            margin: 10px 0;
+            display: block;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>FHIR Communication Generator</h1>
+
+    <label for="orgId">Enter Receiver Organization ID:</label>
+    <input type="text" id="orgId" placeholder="Receiver Organization ID">
+
+    <label for="message">Enter Message Content:</label>
+    <textarea id="message" placeholder="Type your message here..."></textarea>
+
+    <button onclick="generateCommunicationJSON()">Generate Communication JSON</button>
+    <button onclick="uploadCommunicationToServer()">Upload to FHIR Server</button>
+
+    <h2>Generated JSON:</h2>
+    <textarea id="jsonOutput" readonly></textarea>
+
+    <script>
+        const FHIR_SERVER_URL = "https://fhir.tcumi.com:58443/r5/fhir/Communication";
+
+        function generateCommunicationJSON() {
+            const orgId = document.getElementById('orgId').value;
+            const messageContent = document.getElementById('message').value;
+
+            if (!orgId || !messageContent) {
+                alert('Please enter both Organization ID and Message Content.');
+                return;
+            }
+
+            const communicationJSON = {
+                resourceType: "Communication",
+                status: "completed",
+                recipient: [
+                    {
+                        reference: `Organization/${orgId}`
+                    }
+                ],
+                sender: {
+                    reference: "Patient/4899"
+                },
+                payload: [
+                    {
+                        contentString: messageContent
+                    }
+                ],
+                occurrenceDateTime: new Date().toISOString()
+            };
+
+            document.getElementById('jsonOutput').value = JSON.stringify(communicationJSON, null, 2);
+        }
+
+        async function uploadCommunicationToServer() {
+            const jsonOutput = document.getElementById('jsonOutput').value;
+
+            if (!jsonOutput) {
+                alert('Please generate the JSON before uploading.');
+                return;
+            }
+
+            try {
+                const response = await fetch(FHIR_SERVER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonOutput
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Upload successful! Response ID: ' + result.id);
+                } else {
+                    const error = await response.text();
+                    alert('Upload failed: ' + error);
+                }
+            } catch (error) {
+                alert('An error occurred: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
